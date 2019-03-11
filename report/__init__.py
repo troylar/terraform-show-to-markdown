@@ -16,25 +16,49 @@ class ReportGenerator:
 
     def import_data(self):
         with open(self.report_file, "r") as f:
+            is_json = False
+            is_outputs = False
             for line in f:
+                if is_json:
+                    if line.strip() == '}':
+                        val = val + '}'
+                        is_json = False
+                        self.data[res][key] = val
+                    else:
+                        val = val + line
+                    continue
                 if line.startswith('data') or line.startswith('null'):
                     continue
                 m = re.match("^([^[].*):$", line)
                 if m:
+                    if line.startswith('Outputs:'):
+                        is_outputs = True
+                        continue
+                    else:
+                        is_outputs = False
                     res = m.groups()[0]
                     self.data[res] = {}
-                else:
-                    m = re.match('(.*)\s=\s(.*)$', line)
-                    if m:
-                        key = m.groups()[0].strip()
-                        val = m.groups()[1].strip()
-                        if key[-1:] in ['%', '#'] or val == "0" or len(val) == 0:
-                            continue
-                        self.data[res][key] = val
-                        if key in ('id', 'name'):
-                            self.add_token(res, val)
-                    else:
+                    continue
+                if is_outputs:
+                    continue
+                m = re.match('(.*)\s=\s({)$', line)
+                if m:
+                    key = m.groups()[0].strip()
+                    val = m.groups()[1].strip()
+                    is_json = True
+                    continue
+
+                m = re.match('(.*)\s=\s(.*)$', line)
+                if m:
+                    key = m.groups()[0].strip()
+                    val = m.groups()[1].strip()
+                    if key[-1:] in ['%', '#'] or val == "0" or len(val) == 0:
                         continue
+                    self.data[res][key] = val
+                    if key in ('id', 'name'):
+                        self.add_token(res, val)
+                    continue
+                m = re.match
 
     def generate(self):
         with open('{}/report.md'.format(self.report_folder), 'w') as f:
@@ -55,8 +79,19 @@ class ReportGenerator:
                         display_key = '{}.{}'.format('.'.join(root_keys), sub_key)
                     else:
                         display_key = '**{}**'.format(key)
-                    table.append(display_key, self.data[res][key])
+                    val = self.data[res][key]
+                    if val.strip().startswith('{'):
+                        continue
+                    table.append(display_key, val)
                 writer.write(table)
+                for key in self.data[res]:
+                    val = self.data[res][key]
+                    if not val.strip().startswith('{'):
+                        continue
+                    writer.write_heading(key, 2)
+                    code = mg.Code()
+                    code.append(val)
+                    writer.write(code)
                 i = i + 1
 
     def add_token(self, key, token):
