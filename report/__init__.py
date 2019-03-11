@@ -2,17 +2,53 @@ import markdown_generator as mg
 import re
 from PIL import Image, ImageFont, ImageDraw, ImageEnhance
 import os
-
+import yaml
+import copy
 
 class ReportGenerator:
     def __init__(self, **kwargs):
         self.report_file = kwargs.get('ReportFile')
+        self.unique_id = kwargs.get('UniqueId')
         self.tokens = {}
         self.data = {}
-        self.report_folder = kwargs.get('ReportFolder', 'report_ouput')
+        self.report_folder = '{}/{}'.format(
+            kwargs.get('ReportFolder', 'report_ouput'),
+            self.unique_id)
         if not os.path.exists(self.report_folder):
             os.makedirs(self.report_folder)
             os.makedirs('{}/images'.format(self.report_folder))
+        with open('config.yaml', 'r') as f:
+            self.config = yaml.load(f)
+        self.pillars = {}
+
+    def process_data(self):
+        ids = ['arn', 'certificate_arn', 'id']
+        data = copy.deepcopy(self.data)
+        for res in data.keys():
+            for k in data[res]:
+                for id in ids:
+                    if k == id:
+                        self.data[res]['u_id'] = self.data[res][k]
+                        print(res, self.data[res][k])
+                        break
+
+
+    def is_in_pillar(self, res, key):
+        r_type = res.split('.')[0]
+        key_name = key.split('.')[-1]
+        for p in self.config.keys():
+            if p not in self.pillars.keys():
+                self.pillars[p] = []
+            resources = self.config[p]['resources']
+            for r in resources:
+                if isinstance(r, str):
+                    if r == r_type:
+                        return p, res, ''
+                else:
+                    for t in r.keys():
+                        if key_name in r[t]:
+                            return p, res, key_name 
+        return '', '', ''
 
     def import_data(self):
         with open(self.report_file, "r") as f:
@@ -31,6 +67,8 @@ class ReportGenerator:
                     continue
                 m = re.match("^([^[].*):$", line)
                 if m:
+                    if 'data' in line.split('.'):
+                        continue
                     if line.startswith('Outputs:'):
                         is_outputs = True
                         continue
@@ -57,13 +95,23 @@ class ReportGenerator:
                     self.data[res][key] = val
                     if key in ('id', 'name'):
                         self.add_token(res, val)
+                    p, r, k = self.is_in_pillar(res, key)
+                    if p:
+                        if (r, k) not in self.pillars[p]:
+                            self.pillars[p].append((r, k))                    
                     continue
                 m = re.match
 
     def generate(self):
         with open('{}/report.md'.format(self.report_folder), 'w') as f:
             writer = mg.Writer(f)
-            i = 1
+            i = 10
+            for p in self.pillars.keys():
+                writer.write_heading(p)
+                unordered = mg.List()
+                for k in self.pillars[p]:
+                    unordered.append(k[0])
+                    writer.write(unordered)
             for res in self.data:
                 self.create_icon(str(i))
                 writer.write_heading('![{}](./images/{}.png) {}'.format(

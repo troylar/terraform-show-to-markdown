@@ -1,5 +1,14 @@
+import click
 from report import ReportGenerator
 
-r = ReportGenerator(ReportFile="./test/test2.data")
-r.import_data()
-r.generate()
+@click.command()
+@click.argument('report_file')
+@click.argument('unique_id', required=True)
+def main(report_file, unique_id):
+    r = ReportGenerator(ReportFile=report_file, UniqueId=unique_id)
+    r.import_data()
+    r.process_data()
+    r.generate()
+
+if __name__ == '__main__':
+    main()
