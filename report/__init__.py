@@ -15,20 +15,21 @@ class ReportGenerator:
             os.makedirs('{}/images'.format(self.report_folder))
 
     def import_data(self):
-        i = 1
         with open(self.report_file, "r") as f:
             for line in f:
-                m = re.match("^(.*):$", line)
+                if line.startswith('data') or line.startswith('null'):
+                    continue
+                m = re.match("^([^[].*):$", line)
                 if m:
                     res = m.groups()[0]
                     self.data[res] = {}
-                    self.create_icon(str(i))
-                    i = i + 1
                 else:
                     m = re.match('(.*)\s=\s(.*)$', line)
                     if m:
                         key = m.groups()[0].strip()
                         val = m.groups()[1].strip()
+                        if key[-1:] in ['%', '#'] or val == "0" or len(val) == 0:
+                            continue
                         self.data[res][key] = val
                         if key in ('id', 'name'):
                             self.add_token(res, val)
@@ -38,14 +39,25 @@ class ReportGenerator:
     def generate(self):
         with open('{}/report.md'.format(self.report_folder), 'w') as f:
             writer = mg.Writer(f)
+            i = 1
             for res in self.data:
-                writer.write_heading(res)
+                self.create_icon(str(i))
+                writer.write_heading('![{}](./images/{}.png) {}'.format(
+                    res, i, res))
                 table = mg.Table()
                 table.add_column('')
                 table.add_column('')
                 for key in self.data[res]:
-                    table.append(key, self.data[res][key])
+                    if '.' in key:
+                        keys = key.split('.')
+                        root_keys = map(lambda x: '**{}**'.format(x), keys[:-1])
+                        sub_key = '*{}*'.format(keys[-1])
+                        display_key = '{}.{}'.format('.'.join(root_keys), sub_key)
+                    else:
+                        display_key = '**{}**'.format(key)
+                    table.append(display_key, self.data[res][key])
                 writer.write(table)
+                i = i + 1
 
     def add_token(self, key, token):
         if key not in self.tokens.keys():
@@ -53,7 +65,7 @@ class ReportGenerator:
         self.tokens[key].append(token)
 
     def create_icon(self, id):
-        font = ImageFont.truetype('OpenSans-Bold.ttf', 12)
+        font = ImageFont.truetype('OpenSans-Bold.ttf', 18)
         w, h = font.getsize(id)
         width, height = (w+20, 25)
         img = Image.new("RGBA", (width, height), (255, 0, 0, 0))
