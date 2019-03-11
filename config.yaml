@@ -1,0 +1,13 @@
+security:
+  name: Security
+  resources:
+    - common:
+      - policy
+      - key_name
+      - key_id
+      - encrypted
+    - aws_iam_role_policy:
+      - policy
+    - aws_security_group
+    - aws_ssm_parameter:
+      - type
