@@ -4,13 +4,14 @@ from PIL import Image, ImageFont, ImageDraw, ImageEnhance
 import os
 import yaml
 import copy
+from report.resource import Resource
+
 
 class ReportGenerator:
     def __init__(self, **kwargs):
         self.report_file = kwargs.get('ReportFile')
         self.unique_id = kwargs.get('UniqueId')
         self.tokens = {}
-        self.data = {}
         self.report_folder = '{}/{}'.format(
             kwargs.get('ReportFolder', 'report_output'),
             self.unique_id)
@@ -20,17 +21,9 @@ class ReportGenerator:
         with open('config.yaml', 'r') as f:
             self.config = yaml.load(f)
         self.pillars = {}
-
-    def process_data(self):
-        ids = ['arn', 'certificate_arn', 'id']
-        data = copy.deepcopy(self.data)
-        for res in data.keys():
-            for k in data[res]:
-                for id in ids:
-                    if k == id:
-                        self.data[res]['u_id'] = self.data[res][k]
-                        break
-
+        self.roles = {}
+        self.data = {}
+        self.resources = {}
 
     def is_in_pillar(self, res, key):
         r_type = res.split('.')[0]
@@ -53,6 +46,7 @@ class ReportGenerator:
         with open(self.report_file, "r") as f:
             is_json = False
             is_outputs = False
+            val, res, key = ('', '', '')
             for line in f:
                 if is_json:
                     if line.strip() == '}':
@@ -97,10 +91,11 @@ class ReportGenerator:
                     p, r, k = self.is_in_pillar(res, key)
                     if p:
                         if (r, k) not in self.pillars[p]:
-                            print('Adding {}, {}'.format(r,k))
                             self.pillars[p].append((r, k))
                     continue
                 m = re.match
+                for res in self.data.keys():
+                    self.resources[res] = Resource(Name=res, Data=self.data[res])
 
     def generate(self):
         with open('{}/report.md'.format(self.report_folder), 'w') as f:
@@ -113,14 +108,15 @@ class ReportGenerator:
                     unordered.append('.'.join(k))
                 writer.write(unordered)
             i = 1
-            for res in self.data:
+            for res in self.resources:
+                resource = self.resources[res]
                 self.create_icon(str(i))
                 writer.write_heading('![{}](./images/{}.png) {}'.format(
                     res, i, res))
                 table = mg.Table()
                 table.add_column('')
                 table.add_column('')
-                for key in self.data[res]:
+                for key in resource.properties:
                     if '.' in key:
                         keys = key.split('.')
                         root_keys = map(lambda x: '**{}**'.format(x), keys[:-1])
@@ -128,13 +124,13 @@ class ReportGenerator:
                         display_key = '{}.{}'.format('.'.join(root_keys), sub_key)
                     else:
                         display_key = '**{}**'.format(key)
-                    val = self.data[res][key]
+                    val = resource.properties[key]
                     if val.strip().startswith('{'):
                         continue
                     table.append(display_key, val)
                 writer.write(table)
-                for key in self.data[res]:
-                    val = self.data[res][key]
+                for key in resource.properties:
+                    val = resource.properties[key]
                     if not val.strip().startswith('{'):
                         continue
                     writer.write_heading(key, 2)
