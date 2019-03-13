@@ -29,7 +29,6 @@ class ReportGenerator:
                 for id in ids:
                     if k == id:
                         self.data[res]['u_id'] = self.data[res][k]
-                        print(res, self.data[res][k])
                         break
 
 
@@ -98,6 +97,7 @@ class ReportGenerator:
                     p, r, k = self.is_in_pillar(res, key)
                     if p:
                         if (r, k) not in self.pillars[p]:
+                            print('Adding {}, {}'.format(r,k))
                             self.pillars[p].append((r, k))                    
                     continue
                 m = re.match
@@ -105,13 +105,14 @@ class ReportGenerator:
     def generate(self):
         with open('{}/report.md'.format(self.report_folder), 'w') as f:
             writer = mg.Writer(f)
-            i = 10
             for p in self.pillars.keys():
                 writer.write_heading(p)
                 unordered = mg.List()
+                print(self.pillars['security'])
                 for k in self.pillars[p]:
-                    unordered.append(k[0])
-                    writer.write(unordered)
+                    unordered.append('.'.join(k))
+                writer.write(unordered)
+            i = 1
             for res in self.data:
                 self.create_icon(str(i))
                 writer.write_heading('![{}](./images/{}.png) {}'.format(
