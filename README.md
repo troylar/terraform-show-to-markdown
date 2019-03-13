@@ -18,6 +18,8 @@ The goal of this project is to generate an easy-to-read inventory of resources c
     ```
     terraform show > state.out
     ```
+    > You can even combine multiple state output files into a single file if you want to aggregate multiple terraform deploys into a single report. `terraform-report` _should_ remove most of the noise.
+    
 4. Create the markdown using a `unique_id`, which will be the subfolder for the markdown.
    ```
    python ./main.py ./state.out my_unique_id
