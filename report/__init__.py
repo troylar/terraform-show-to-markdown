@@ -12,7 +12,7 @@ class ReportGenerator:
         self.tokens = {}
         self.data = {}
         self.report_folder = '{}/{}'.format(
-            kwargs.get('ReportFolder', 'report_ouput'),
+            kwargs.get('ReportFolder', 'report_output'),
             self.unique_id)
         if not os.path.exists(self.report_folder):
             os.makedirs(self.report_folder)
@@ -46,7 +46,7 @@ class ReportGenerator:
                 else:
                     for t in r.keys():
                         if key_name in r[t]:
-                            return p, res, key_name 
+                            return p, res, key_name
         return '', '', ''
 
     def import_data(self):
@@ -98,7 +98,7 @@ class ReportGenerator:
                     if p:
                         if (r, k) not in self.pillars[p]:
                             print('Adding {}, {}'.format(r,k))
-                            self.pillars[p].append((r, k))                    
+                            self.pillars[p].append((r, k))
                     continue
                 m = re.match
 
