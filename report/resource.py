@@ -15,6 +15,10 @@ class BaseResource:
         return hasattr(self, 'role')
 
     @property
+    def has_name(self):
+        return hasattr(self, 'name')
+
+    @property
     def has_policy(self):
         return hasattr(self, 'policy') or hasattr(self, 'policy_arn')
 
@@ -43,3 +47,12 @@ class Resource(BaseResource):
             if id in self.__dict__.keys():
                 return self.__dict__[id]
 
+
+class ResourceManager:
+    def __init__(self, **kwargs):
+        self.data = kwargs.get('Data')
+
+    def find_by_name(self, name):
+        for res in self.data:
+            if res.has_name and res.name == name:
+                return res

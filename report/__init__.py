@@ -4,7 +4,7 @@ from PIL import Image, ImageFont, ImageDraw, ImageEnhance
 import os
 import yaml
 import copy
-from report.resource import Resource
+from report.resource import Resource, ResourceManager
 
 
 class ReportGenerator:
@@ -23,7 +23,7 @@ class ReportGenerator:
         self.pillars = {}
         self.roles = {}
         self.data = {}
-        self.resources = {}
+        self.rm = ResourceManager()
 
     def is_in_pillar(self, res, key):
         r_type = res.split('.')[0]
@@ -41,6 +41,12 @@ class ReportGenerator:
                         if key_name in r[t]:
                             return p, res, key_name
         return '', '', ''
+
+    def process_resources(self):
+        for res in self.resources.keys():
+            resource = self.resources[res]
+            if resource.has_policy:
+                print(resource.resource_policy)
 
     def import_data(self):
         with open(self.report_file, "r") as f:
@@ -96,6 +102,7 @@ class ReportGenerator:
                 m = re.match
                 for res in self.data.keys():
                     self.resources[res] = Resource(Name=res, Data=self.data[res])
+                self.process_resources()
 
     def generate(self):
         with open('{}/report.md'.format(self.report_folder), 'w') as f:
